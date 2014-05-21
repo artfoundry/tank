@@ -33,7 +33,7 @@ define(function(require, exports, module) {
     var node = tankView.add(tankModifier);
 
     var s1 = new Surface({
-        size: [100, 200],
+        size: [50, 100],
         properties: {
             backgroundColor: 'red'
         }
@@ -42,14 +42,14 @@ define(function(require, exports, module) {
     s1.pipe(tankView);
 
     var s2 = new Surface({
-        size: [100, 100],
+        size: [50, 50],
         properties: {
             backgroundColor: 'red'
         }
     });
     mainContext.add(centerModifier).add(tankView);
     var gunPos = new StateModifier({
-        transform: Transform.translate(100, 0, 0)
+        transform: Transform.translate(50, 0, 0)
     });
     node.add(gunPos).add(s2);
     s2.pipe(tankView);
@@ -86,16 +86,14 @@ define(function(require, exports, module) {
             a[1] += 10 * Math.sin(angle);
             tankView.translation.set(a);
         } else if (e.keyCode == 39) {
-            var angle = tankView.rotation.get() + Math.PI/50;
+            var angle = tankView.rotation.get() + Math.PI/16;
             if(angle > (Math.PI * 2)) angle = 0;
             else if(angle < 0) angle = (Math.PI * 2);
-            console.log(angle);
             tankView.rotation.set(angle);
         } else if (e.keyCode == 37) {
-            var angle = tankView.rotation.get() - Math.PI/50;
+            var angle = tankView.rotation.get() - Math.PI/16;
             if(angle > (Math.PI * 2)) angle = 0;
             else if(angle < 0) angle = (Math.PI * 2);
-            console.log(angle);
             tankView.rotation.set(angle);
         }
         else {
