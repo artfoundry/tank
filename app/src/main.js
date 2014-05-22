@@ -22,8 +22,8 @@ define(function(require, exports, module) {
     var mainContext = Engine.createContext();
 
     // your app here
-    var tank1 = new Tank(0, [window.innerWidth/4+25, window.innerHeight/2 + 25, 0], 'red');
-    var tank2 = new Tank(0, [3*window.innerWidth/4+25, window.innerHeight/2 + 25, 0], 'blue');
+    var tank1 = new Tank(0, [window.innerWidth/4+50, window.innerHeight/2, 0], 'red');
+    var tank2 = new Tank(0, [3*window.innerWidth/4-50, window.innerHeight/2 , 0], 'blue');
 
     var physicsEngine = new PhysicsEngine();
 
@@ -52,7 +52,7 @@ define(function(require, exports, module) {
     for (var i = 0; i < blocksPos.length; i++) {
         var blockPos = blocksPos[i];
         var blockBoundary = new Circle({
-            radius: 25,
+            radius: 50,
             mass : Infinity,
             position: [(blockPos[0] * window.innerWidth), (blockPos[1] * window.innerHeight)]
         });
@@ -62,13 +62,13 @@ define(function(require, exports, module) {
         physicsEngine.addBody(blockBoundary);
 
         var block = new Surface({
-            size: [50, 50],
+            size: [(blockBoundary.radius * 2), (blockBoundary.radius * 2)],
             properties: {
                 backgroundColor: 'black',
-                borderRadius: '50px'
+                borderRadius: (blockBoundary.radius * 2) + 'px'
             }
         });
-        mainContext.add(blockBoundary).add(block);
+        mainContext.add(blockBoundary).add(new StateModifier({transform: Transform.translate(-blockBoundary.radius, -blockBoundary.radius, 0)})).add(block);
     }
     
     var tankBoundaries = [tank1.tankMotion, tank2.tankMotion];
@@ -83,24 +83,42 @@ define(function(require, exports, module) {
     physicsEngine.attach(collision, [tank2.tankMotion], bulletMotion);
     physicsEngine.attach(collision, [tank1.tankMotion], bullet2);
 
+    physicsEngine.attach(collision, [tank2.tankMotion], tank1.tankMotion);
+    physicsEngine.attach(collision, [tank1.tankMotion], tank2.tankMotion);
+    
+    collision.on('collision', function(data) {
+    	if(data.source === bullet2 || data.source === bulletMotion) {
+    		if(data.target === tank1.tankMotion) {
+    			bullet2.reset([-10,-10], [0,0,0]);
+    			tank1.hide();
+    		} else if(data.target === tank2.tankMotion) {
+    			bulletMotion.reset([-10,-10], [0,0,0]);
+    			tank2.hide();
+    		}
+    	}
+    });
+
+    if(window.location.search.indexOf("checkPhysics") != -1) {
+    	checkPhysics(physicsEngine);
+    }
 
     Engine.on('keydown', function(e) {
         if (e.keyCode == 40) {
-        	tank1.moveRelative(-10, -10);
+        	tank1.moveRelative(-15, -15);
         } else if (e.keyCode == 38) {
-        	tank1.moveRelative(10, 10);
+        	tank1.moveRelative(15, 15);
         } else if (e.keyCode == 39) {
-        	tank1.rotateRelative(Math.PI/16);
+        	tank1.rotateRelative(Math.PI/8);
         } else if (e.keyCode == 37) {
-        	tank1.rotateRelative(-Math.PI/16);
+        	tank1.rotateRelative(-Math.PI/8);
         } else if (e.keyCode == 83) {
-        	tank2.moveRelative(-10, -10);
+        	tank2.moveRelative(-15, -15);
         } else if (e.keyCode == 87) {
-        	tank2.moveRelative(10, 10);
+        	tank2.moveRelative(15, 15);
         } else if (e.keyCode == 68) {
-        	tank2.rotateRelative(Math.PI/16);
+        	tank2.rotateRelative(Math.PI/8);
         } else if (e.keyCode == 65) {
-        	tank2.rotateRelative(-Math.PI/16);
+        	tank2.rotateRelative(-Math.PI/8);
 	    } else if (e.keyCode == 32) {
 	    	tank1.shoot();
 	    } else if (e.keyCode == 81) {
@@ -111,5 +129,46 @@ define(function(require, exports, module) {
         };
     });
     
+    function checkPhysics(physicsEngine) {
+    	var physicsOverlay = document.getElementById("famousPhysicsOverlay");
+    	if(!physicsOverlay) {
+    		physicsOverlay = document.createElement("canvas");
+    		document.body.appendChild(physicsOverlay);
+    		physicsOverlay.setAttribute("id", "famousPhysicsOverlay");
+    		physicsOverlay.setAttribute("width", window.innerWidth);
+    		physicsOverlay.setAttribute("height", window.innerHeight);
+    	}
+    	var ctx = physicsOverlay.getContext("2d");
+    	var btn2 = document.createElement("button");
+    	btn2.style.position = "absolute";
+    	btn2.style.right = "0px";
+    	btn2.style.top = "20px";
+    	document.body.appendChild(btn2);
+    	btn2.innerText = "Refresh";
+    	btn2.onclick = function() {
+    		ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+    		for(var i=0; i < physicsEngine._bodies.length; i++)
+    		{
+    			var pos = physicsEngine._bodies[i].position;
+    			var rds = physicsEngine._bodies[i].radius;
+    			ctx.strokeStyle = '#ff0000';
+    			ctx.beginPath();
+    			ctx.arc(pos.x,pos.y,rds,0,2*Math.PI);
+    			ctx.stroke();
+    		}
+    	}
+    	var btn = document.createElement("button");
+    	btn.style.position = "absolute";
+    	btn.style.right = btn.style.top = "0px";
+    	document.body.appendChild(btn);
+    	btn.innerText = "Remove Physics Checker";
+    	btn.onclick = function() {
+    		document.body.removeChild(physicsOverlay);
+    		document.body.removeChild(btn);
+    		document.body.removeChild(btn2);
+    	}
+    	btn2.onclick();
+    }
+
     
 });
