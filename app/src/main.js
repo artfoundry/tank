@@ -15,6 +15,8 @@ define(function(require, exports, module) {
     var PhysicsEngine = require('famous/physics/PhysicsEngine');
     var RenderController = require('famous/views/RenderController');
 
+    var Tank = require('Tank');
+
     // create the main context
     var mainContext = Engine.createContext();
 
@@ -44,165 +46,90 @@ define(function(require, exports, module) {
     })
     mainContext.add(buttonVisibility);
     buttonVisibility.show(playButtonView);
-//
+
     playButton.on('click', function() {
         var player = connect();
         buttonVisibility.hide({}, drawBoard);
     });
 
+
     function drawBoard(){
+        var tank1 = new Tank(0, [window.innerWidth/4+25, window.innerHeight/2 + 25, 0], 'red');
+        var tank2 = new Tank(0, [3*window.innerWidth/4+25, window.innerHeight/2 + 25, 0], 'blue');
 
+        var physicsEngine = new PhysicsEngine();
+
+        mainContext.add(tank1.createBoundary(physicsEngine)).add(tank1.getView());
+        mainContext.add(tank2.createBoundary(physicsEngine)).add(tank2.getView());
+
+        tank2.rotateRelative(Math.PI);
+
+        var bulletMotion = tank1.createBullet(mainContext, physicsEngine);
+        var bullet2 =  tank2.createBullet(mainContext, physicsEngine);
+
+        var blocksPos = [
+            [0.1,0.1],
+            [0.1,0.5],
+            [0.1,0.9],
+            [0.5,0.1],
+            [0.5,0.5],
+            [0.5,0.9],
+            [0.9,0.1],
+            [0.9,0.5],
+            [0.9,0.9],
+        ];
+
+        var blockBoundaries = [];
+
+        for (var i = 0; i < blocksPos.length; i++) {
+            var blockPos = blocksPos[i];
+            var blockBoundary = new Circle({
+                radius: 25,
+                mass : Infinity,
+                position: [(blockPos[0] * window.innerWidth), (blockPos[1] * window.innerHeight)]
+            });
+
+            blockBoundaries.push(blockBoundary);
+
+            physicsEngine.addBody(blockBoundary);
+
+            var block = new Surface({
+                size: [50, 50],
+                properties: {
+                    backgroundColor: 'black',
+                    borderRadius: '50px'
+                }
+            });
+            mainContext.add(blockBoundary).add(block);
+        }
+
+        var tankBoundaries = [tank1.tankMotion, tank2.tankMotion];
+
+        var collision = new Collision({restitution :.3});
+        physicsEngine.attach(collision, blockBoundaries, bulletMotion);
+        physicsEngine.attach(collision, blockBoundaries, bullet2);
+
+        physicsEngine.attach(collision, blockBoundaries, tank1.tankMotion);
+        physicsEngine.attach(collision, blockBoundaries, tank2.tankMotion);
+
+        physicsEngine.attach(collision, [tank2.tankMotion], bulletMotion);
+        physicsEngine.attach(collision, [tank1.tankMotion], bullet2);
+
+
+        Engine.on('keydown', function(e) {
+            var tank = tank1;
+            if(window.player == "blue") tank = tank2;
+            if (e.keyCode == 40) {
+                tank.moveRelative(-10, -10);
+            } else if (e.keyCode == 38) {
+                tank.moveRelative(10, 10);
+            } else if (e.keyCode == 39) {
+                tank.rotateRelative(Math.PI/16);
+            } else if (e.keyCode == 37) {
+                tank.rotateRelative(-Math.PI/16);
+            } else if (e.keyCode == 32) {
+                tank.shoot();
+            };
+        });
     }
-
-    var tankView = new View();
-
-    tankView.rotation = new Transitionable(0);
-    tankView.translation = new Transitionable([0, 0, 0])
-
-    var centerModifier = new Modifier({origin: [0.5, 0.5]});
-    var tankModifier = new Modifier({
-        origin: [0.5, 0.5],
-        transform: function() {
-            return Transform.thenMove(Transform.rotateZ(tankView.rotation.get()),
-                tankView.translation.get());
-        }
-    });
-    var tankBoundary = new Circle({
-        radius: 50,
-        mass : Infinity,
-        position: [0,0]
-    });
-
-    var node = tankView.add(tankModifier);
-
-    var s1 = new Surface({
-        size: [50, 100],
-        properties: {
-            backgroundColor: 'red'
-        }
-    });
-    node.add(s1);
-    s1.pipe(tankView);
-
-
-    var s2 = new Surface({
-        size: [50, 50],
-        properties: {
-            backgroundColor: 'red'
-        }
-    });
-
-    mainContext.add(centerModifier).add(tankView);
-    var gunPos = new StateModifier({
-        transform: Transform.translate(50, 0, 0)
-    });
-    node.add(gunPos).add(s2).add(tankBoundary);
-    s2.pipe(tankView);
-
-
-// normally inside view module's code
-    tankView._eventInput.on('click', function() {
-        s2.setContent('hello');
-        //tankView._eventOutput.emit('hello');
-    });
-
-    Engine.on('keydown', function(e) {
-        // alert(e.keyCode);
-
-        if (e.keyCode == 40) {
-            var a = tankView.translation.get();
-            var angle = tankView.rotation.get();
-            if(angle > (Math.PI * 2)) angle = 0;
-            else if(angle < 0) angle = (Math.PI * 2);
-            a[0] -= 10 * Math.cos(angle);
-            a[1] -= 10 * Math.sin(angle);
-            tankView.translation.set(a)
-        } else if (e.keyCode == 38) {
-            a = tankView.translation.get();
-            var angle = tankView.rotation.get();
-            if(angle > (Math.PI * 2)) angle = 0;
-            else if(angle < 0) angle = (Math.PI * 2);
-            a[0] += 10 * Math.cos(angle);
-            a[1] += 10 * Math.sin(angle);
-            tankView.translation.set(a);
-        } else if (e.keyCode == 39) {
-            var angle = tankView.rotation.get() + Math.PI/16;
-            if(angle > (Math.PI * 2)) angle = 0;
-            else if(angle < 0) angle = (Math.PI * 2);
-            tankView.rotation.set(angle);
-        } else if (e.keyCode == 37) {
-            var angle = tankView.rotation.get() - Math.PI/16;
-            if(angle > (Math.PI * 2)) angle = 0;
-            else if(angle < 0) angle = (Math.PI * 2);
-            tankView.rotation.set(angle);
-        } else if (e.keyCode == 32) {
-
-        } else {
-            console.log(e.keyCode);
-        };
-    });
-
-    var physicsEngine = new PhysicsEngine();
-
-    var bulletMotion = new Circle({
-        radius : 1,
-        position: [window.innerWidth/2 - 100,window.innerHeight/2 - 100,0],
-        velocity: [.5,.5,0]
-    });
-
-    var bulletSurface = new Surface({
-        size: [10,10],
-        properties : {
-            backgroundColor: 'red',
-            borderRadius: '10px'
-        }
-    });
-
-    physicsEngine.addBody(bulletMotion);
-    mainContext.add(bulletMotion).add(bulletSurface);
-
-
-    var blocksPos = [
-        [0.1,0.1],
-        [0.1,0.5],
-        [0.1,0.9],
-        [0.5,0.1],
-        [0.5,0.5],
-        [0.5,0.9],
-        [0.9,0.1],
-        [0.9,0.5],
-        [0.9,0.9],
-    ];
-
-    var blockBoundaries = [];
-
-    for (var i = 0; i < blocksPos.length; i++) {
-        var blockPos = blocksPos[i];
-        var blockBoundary = new Circle({
-            radius: 25,
-            mass : Infinity,
-            position: [blockPos[0] * window.innerWidth, blockPos[1] * window.innerHeight]
-        });
-
-        blockBoundaries.push(blockBoundary);
-
-        physicsEngine.addBody(blockBoundary);
-
-        var block = new Surface({
-            size: [50, 50],
-            properties: {
-                backgroundColor: 'black',
-                borderRadius: '5px'
-            }
-        });
-        var position = new StateModifier({
-            origin: blocksPos[i]
-        });
-        blockBoundaries.push(tankBoundary);
-        mainContext.add(blockBoundary).add(block);
-    }
-
-    var collision = new Collision({restitution :.3});
-    physicsEngine.attach(collision, blockBoundaries, bulletMotion);
-
 });
