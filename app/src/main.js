@@ -10,94 +10,106 @@ define(function(require, exports, module) {
     var Transitionable = require('famous/transitions/Transitionable');
     var View = require('famous/core/View');
 
+    var Particle = require('famous/physics/bodies/Particle');
+    var Circle = require('famous/physics/bodies/Circle');
+    var Collision = require('famous/physics/constraints/Collision');
+    
+    var PhysicsEngine = require('famous/physics/PhysicsEngine');
+
+    var Tank = require('Tank');
 
     // create the main context
     var mainContext = Engine.createContext();
 
     // your app here
-    var tankView = new View();
+    var tank1 = new Tank(0, [window.innerWidth/4+25, window.innerHeight/2 + 25, 0], 'red');
+    var tank2 = new Tank(0, [3*window.innerWidth/4+25, window.innerHeight/2 + 25, 0], 'blue');
 
-    tankView.rotation = new Transitionable(0);
-    tankView.translation = new Transitionable([0, 0, 0])
+    var physicsEngine = new PhysicsEngine();
 
-    var centerModifier = new Modifier({origin: [0.5, 0.5]});
-    var tankModifier = new Modifier({
-        origin: [0.5, 0.5],
-        transform: function() {
-            return Transform.thenMove(Transform.rotateZ(tankView.rotation.get()),
-                tankView.translation.get());
-        }
-    });
+    mainContext.add(tank1.createBoundary(physicsEngine)).add(tank1.getView());
+    mainContext.add(tank2.createBoundary(physicsEngine)).add(tank2.getView());
+    
+    tank2.rotateRelative(Math.PI);
 
+    var bulletMotion = tank1.createBullet(mainContext, physicsEngine);
+    var bullet2 =  tank2.createBullet(mainContext, physicsEngine);
 
-    var node = tankView.add(tankModifier);
+    var blocksPos = [
+        [0.1,0.1],
+        [0.1,0.5],
+        [0.1,0.9],
+        [0.5,0.1],
+        [0.5,0.5],
+        [0.5,0.9],
+        [0.9,0.1],
+        [0.9,0.5],
+        [0.9,0.9],
+    ];
 
-    var s1 = new Surface({
-        size: [50, 100],
-        properties: {
-            backgroundColor: 'red'
-        }
-    });
-    node.add(s1);
-    s1.pipe(tankView);
+    var blockBoundaries = [];
 
-    var s2 = new Surface({
-        size: [50, 50],
-        properties: {
-            backgroundColor: 'red'
-        }
-    });
-    mainContext.add(centerModifier).add(tankView);
-    var gunPos = new StateModifier({
-        transform: Transform.translate(50, 0, 0)
-    });
-    node.add(gunPos).add(s2);
-    s2.pipe(tankView);
+    for (var i = 0; i < blocksPos.length; i++) {
+        var blockPos = blocksPos[i];
+        var blockBoundary = new Circle({
+            radius: 25,
+            mass : Infinity,
+            position: [(blockPos[0] * window.innerWidth), (blockPos[1] * window.innerHeight)]
+        });
 
+        blockBoundaries.push(blockBoundary);
 
-    var pos = 0;
-    var rot = 0;
+        physicsEngine.addBody(blockBoundary);
 
-// alternatively, myView.subscribe(surface);
+        var block = new Surface({
+            size: [50, 50],
+            properties: {
+                backgroundColor: 'black',
+                borderRadius: '50px'
+            }
+        });
+        mainContext.add(blockBoundary).add(block);
+    }
+    
+    var tankBoundaries = [tank1.tankMotion, tank2.tankMotion];
 
-// normally inside view module's code
-    tankView._eventInput.on('click', function() {
-        s2.setContent('hello');
-        //tankView._eventOutput.emit('hello');
-    });
+    var collision = new Collision({restitution :.3});
+    physicsEngine.attach(collision, blockBoundaries, bulletMotion);
+    physicsEngine.attach(collision, blockBoundaries, bullet2);
+    
+    physicsEngine.attach(collision, blockBoundaries, tank1.tankMotion);
+    physicsEngine.attach(collision, blockBoundaries, tank2.tankMotion);
+
+    physicsEngine.attach(collision, [tank2.tankMotion], bulletMotion);
+    physicsEngine.attach(collision, [tank1.tankMotion], bullet2);
+
 
     Engine.on('keydown', function(e) {
-        // alert(e.keyCode);
-
         if (e.keyCode == 40) {
-            var a = tankView.translation.get();
-            var angle = tankView.rotation.get();
-            if(angle > (Math.PI * 2)) angle = 0;
-            else if(angle < 0) angle = (Math.PI * 2);
-            a[0] -= 10 * Math.cos(angle);
-            a[1] -= 10 * Math.sin(angle);
-            tankView.translation.set(a)
+        	tank1.moveRelative(-10, -10);
         } else if (e.keyCode == 38) {
-            a = tankView.translation.get();
-            var angle = tankView.rotation.get();
-            if(angle > (Math.PI * 2)) angle = 0;
-            else if(angle < 0) angle = (Math.PI * 2);
-            a[0] += 10 * Math.cos(angle);
-            a[1] += 10 * Math.sin(angle);
-            tankView.translation.set(a);
+        	tank1.moveRelative(10, 10);
         } else if (e.keyCode == 39) {
-            var angle = tankView.rotation.get() + Math.PI/16;
-            if(angle > (Math.PI * 2)) angle = 0;
-            else if(angle < 0) angle = (Math.PI * 2);
-            tankView.rotation.set(angle);
+        	tank1.rotateRelative(Math.PI/16);
         } else if (e.keyCode == 37) {
-            var angle = tankView.rotation.get() - Math.PI/16;
-            if(angle > (Math.PI * 2)) angle = 0;
-            else if(angle < 0) angle = (Math.PI * 2);
-            tankView.rotation.set(angle);
-        }
+        	tank1.rotateRelative(-Math.PI/16);
+        } else if (e.keyCode == 83) {
+        	tank2.moveRelative(-10, -10);
+        } else if (e.keyCode == 87) {
+        	tank2.moveRelative(10, 10);
+        } else if (e.keyCode == 68) {
+        	tank2.rotateRelative(Math.PI/16);
+        } else if (e.keyCode == 65) {
+        	tank2.rotateRelative(-Math.PI/16);
+	    } else if (e.keyCode == 32) {
+	    	tank1.shoot();
+	    } else if (e.keyCode == 81) {
+	    	tank2.shoot();
+	    }
         else {
             console.log(e.keyCode);
         };
     });
+    
+    
 });
