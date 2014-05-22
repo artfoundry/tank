@@ -13,11 +13,47 @@ define(function(require, exports, module) {
     var Circle = require('famous/physics/bodies/Circle');
     var Collision = require('famous/physics/constraints/Collision');
     var PhysicsEngine = require('famous/physics/PhysicsEngine');
+    var RenderController = require('famous/views/RenderController');
 
     // create the main context
     var mainContext = Engine.createContext();
 
     // your app here
+
+    var playButton = new Surface({
+        size: [100,50],
+        content: "Play",
+        properties: {
+            backgroundColor: "yellow",
+            color: "black",
+            textAlign: "center",
+            fontSize: "35px"
+        }
+    });
+
+    var playButtonMod = new StateModifier({
+        origin: [0.4,0.4]
+    });
+
+    var playButtonView = new View();
+    playButtonView.add(playButtonMod).add(playButton);
+
+    var buttonVisibility = new RenderController({
+        inTransition: false,
+        outTransition: false
+    })
+    mainContext.add(buttonVisibility);
+    buttonVisibility.show(playButtonView);
+//
+    playButton.on('click', function() {
+        var player = connect();
+        buttonVisibility.hide({}, drawBoard);
+    });
+
+    function drawBoard(){
+
+    }
+
     var tankView = new View();
 
     tankView.rotation = new Transitionable(0);
