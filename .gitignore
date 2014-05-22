@@ -16,6 +16,6 @@ dist
 app/lib
 .yo-rc.json
 
-# WebStorm
-##########
+# WebStorm files
+################
 .idea

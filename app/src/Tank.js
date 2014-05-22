@@ -56,8 +56,26 @@ define(function(require, exports, module) {
         node.add(gunPos).add(s2);
         s2.pipe(this.tankView);
     }
+    
+    Tank.prototype._keepPositionVisible = function(pos) {
+    	var changed = false;
+    	var win = [window.innerWidth, window.innerHeight];
+    	
+    	for(var i=0; i < 2; i++) {
+        	if(pos[i] < 0) {
+        		pos[i] += win[i];
+        		changed = true;
+        	} else if(pos[i] > win[i]){
+            	pos[i] %= win[i];    		
+        		changed = true;
+        	}
+    		
+    	}
+    	return changed;
+    }
 
     Tank.prototype.moveRelative = function(x, y) {
+    	this._moving = true;
         var a = this.tankView.translation.get();
         var angle = this.tankView.rotation.get();
         if(angle > (Math.PI * 2)) angle = 0;
@@ -66,24 +84,15 @@ define(function(require, exports, module) {
         a[1] += y * Math.sin(angle);
 
     	this.tankMotion.reset();
-    	var pos = this.tankView.translation.get();
-    	if(pos[0] < 0) {
-    		pos[0] += window.innerWidth;
-    	} else {
-        	pos[0] %= window.innerWidth;    		
-    	}
     	
-    	if(pos[1] < 0) {
-    		pos[1] += window.innerHeight;
-    	} else {
-        	pos[1] %= window.innerHeight;    		
-    	}
-    	pos[1] = pos[1] % window.innerHeight;
-    	this.tankMotion.setPosition([pos[0], pos[1], 0]);
+    	var position = this.tankView.translation.get();
+    	this._keepPositionVisible(position)
+    	this.tankMotion.setPosition(position);
     	this.tankMotion.setVelocity([0.1*Math.cos(angle), 0.1*Math.sin(angle), 0]);
     	var me = this;
     	setTimeout(function() {
         	me.tankMotion.setVelocity([0, 0, 0]);    		
+        	me._moving = false;
     	}, 100);
     }
 
@@ -136,6 +145,24 @@ define(function(require, exports, module) {
         });
 
         physicsEngine.addBody(this.tankMotion);
+        
+        var me = this;
+        this.tankMotion.on('update', function(tankParticle) {
+        	var position = tankParticle.getPosition();
+        	if(!me._moving && me.tankView && me.tankView.translation) {
+    			var oldPos = me.tankView.translation.get();
+        		if((Math.abs(oldPos[0] - position[0]) + Math.abs(oldPos[1] - position[1])) > 10) {
+        			var changed = me._keepPositionVisible(position);
+        			if(changed) {
+        				// Update position of physics body - position of translation object will happen in due course...
+            			tankParticle.setPosition(position);	
+        			} else {
+            			me.tankView.translation.set(position);
+        			} 
+        		}
+        	}
+        });
+        
         return this.tankMotion;
     }
 
