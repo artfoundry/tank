@@ -47,10 +47,11 @@ define(function(require, exports, module) {
         inTransition: false,
         outTransition: false
     })
+
     mainContext.add(buttonVisibility);
     buttonVisibility.show(playButtonView);
     playButton.on('click', function() {
-        var player = connect();
+        connect();
         buttonVisibility.hide({}, drawBoard);
     });
 

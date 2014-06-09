@@ -19,7 +19,7 @@ define(function(require, exports, module) {
 
         this.initialRotation = initialRotation;
         this.tankView.rotation = new Transitionable(initialRotation);
-        this.tankView.translation = new Transitionable(initialPosition)
+        this.tankView.translation = new Transitionable(initialPosition);
 
         var me = this;
         this.tankModifier = new Modifier({
@@ -94,13 +94,19 @@ define(function(require, exports, module) {
         	me.tankMotion.setVelocity([0, 0, 0]);    		
         	me._moving = false;
     	}, 100);
+
+        var playerData = [position, angle, this.bulletMotion];
+        send(playerData);
     }
 
     Tank.prototype.rotateRelative = function(angle) {
         var angle = this.tankView.rotation.get() + angle;
         if(angle > (Math.PI * 2)) angle = 0;
         else if(angle < 0) angle = (Math.PI * 2);
-        this.tankView.rotation.set(angle);    	
+        this.tankView.rotation.set(angle);
+
+        var playerData = [position, angle, this.bulletMotion];
+        send(playerData);
     }
     
     Tank.prototype.getView = function() {
@@ -175,7 +181,9 @@ define(function(require, exports, module) {
         	
         	var angle = this.tankView.rotation.get();
         	this.bulletMotion.setVelocity([0.5*Math.cos(angle), 0.5*Math.sin(angle), 0]);    		
-    	}
+    	};
+        var playerData = [position, angle, this.bulletMotion];
+        send(playerData);
     }
 
     Tank.prototype.hide = function() {
