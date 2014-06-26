@@ -22,7 +22,7 @@ function connect() {
 }
 
 function send(data) {
-    playerRef.set("data", data);
+    playerRef.set({"data": data});
 }
 
 function retrieve() {
