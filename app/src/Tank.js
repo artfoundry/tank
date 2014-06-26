@@ -95,8 +95,8 @@ define(function(require, exports, module) {
         	me._moving = false;
     	}, 100);
 
-        var playerData = [position, angle, this.bulletMotion];
-        send(playerData);
+//        var playerData = [position, angle, this.bulletMotion];
+//        send(playerData);
     }
 
     Tank.prototype.rotateRelative = function(angle) {
@@ -105,8 +105,8 @@ define(function(require, exports, module) {
         else if(angle < 0) angle = (Math.PI * 2);
         this.tankView.rotation.set(angle);
 
-        var playerData = [position, angle, this.bulletMotion];
-        send(playerData);
+//        var playerData = [this.tankView.translation.get(), angle, this.bulletMotion];
+//        send(playerData);
     }
     
     Tank.prototype.getView = function() {
